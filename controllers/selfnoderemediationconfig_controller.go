@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
 	"os"
 
 	"github.com/go-logr/logr"
@@ -134,6 +135,18 @@ func (r *SelfNodeRemediationConfigReconciler) syncConfigDaemonSet(ctx context.Co
 		logger.Error(err, "Fail to render config daemon manifests")
 		return err
 	}
+
+	r.Log.Info("[DEBUG] toleration count before update")
+	r.debugTolerationCount(objs)
+
+	if err := r.updateDsTolerations(objs, snrConfig.Spec.CustomDsTolerations); err != nil {
+		logger.Error(err, "Fail update daemonset tolerations")
+		return err
+	}
+
+	r.Log.Info("[DEBUG] toleration count after update")
+	r.debugTolerationCount(objs)
+
 	// Sync DaemonSets
 	for _, obj := range objs {
 		err = r.syncK8sResource(ctx, snrConfig, obj)
@@ -143,6 +156,13 @@ func (r *SelfNodeRemediationConfigReconciler) syncConfigDaemonSet(ctx context.Co
 		}
 	}
 	return nil
+}
+
+func (r *SelfNodeRemediationConfigReconciler) debugTolerationCount(objs []*unstructured.Unstructured) {
+	r.Log.Info("[DEBUG] starting toleration count")
+	tolerations, _, _ := unstructured.NestedFieldNoCopy(objs[0].Object, "spec", "template", "spec", "tolerations")
+	tolerationsList := tolerations.([]interface{})
+	r.Log.Info("[DEBUG] toleration elements count", "count", len(tolerationsList))
 }
 
 func (r *SelfNodeRemediationConfigReconciler) syncK8sResource(ctx context.Context, cr *selfnoderemediationv1alpha1.SelfNodeRemediationConfig, in *unstructured.Unstructured) error {
@@ -186,6 +206,52 @@ func (r *SelfNodeRemediationConfigReconciler) syncCerts(cr *selfnoderemediationv
 	err = st.StoreCerts(ca, cert, key)
 	if err != nil {
 		r.Log.Error(err, "Failed to store certs in secret")
+		return err
+	}
+	return nil
+}
+
+func (r *SelfNodeRemediationConfigReconciler) updateDsTolerations(objs []*unstructured.Unstructured, tolerations []corev1.Toleration) error {
+	r.Log.Info("Updating DS tolerations")
+	if len(tolerations) == 0 {
+		return nil
+	}
+	for _, toleration := range tolerations {
+		for _, ds := range objs {
+			if err := r.updateTolerationOnDs(ds, toleration); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (r *SelfNodeRemediationConfigReconciler) updateTolerationOnDs(ds *unstructured.Unstructured, toleration corev1.Toleration) error {
+	r.Log.Info("[DEBUG] updateTolerationOnDs start")
+	tolerations, _, err := unstructured.NestedFieldNoCopy(ds.Object, "spec", "template", "spec", "tolerations")
+	if err != nil {
+		r.Log.Error(err, "tolerations not found in ds")
+		return err
+	}
+
+	updatedTolerations, ok := tolerations.([]interface{})
+	if !ok {
+		err := fmt.Errorf(fmt.Sprintf("failed to convert tolerations expected of type %T but got %T", []interface{}{}, tolerations))
+		r.Log.Error(err, err.Error())
+		return err
+	}
+
+	newToleration := interface{}(
+		map[string]interface{}{
+			"Key":               toleration.Key,
+			"operator":          toleration.Operator,
+			"value":             toleration.Value,
+			"effect":            toleration.Effect,
+			"tolerationseconds": toleration.TolerationSeconds,
+		})
+	updatedTolerations = append(updatedTolerations, newToleration)
+	if err := unstructured.SetNestedField(ds.Object, updatedTolerations, "spec", "template", "spec", "tolerations"); err != nil {
+		r.Log.Error(err, "failed to set tolerations")
 		return err
 	}
 	return nil
