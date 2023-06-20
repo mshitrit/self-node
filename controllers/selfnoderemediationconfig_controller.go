@@ -240,7 +240,7 @@ func (r *SelfNodeRemediationConfigReconciler) updateTolerationOnDs(ds *unstructu
 		r.Log.Error(err, err.Error())
 		return err
 	}
-
+	r.Log.Info("[DEBUG] updateTolerationOnDs original tolerations", "tolerations", updatedTolerations)
 	newToleration := interface{}(
 		map[string]interface{}{
 			"Key":               toleration.Key,
@@ -250,6 +250,7 @@ func (r *SelfNodeRemediationConfigReconciler) updateTolerationOnDs(ds *unstructu
 			"tolerationseconds": toleration.TolerationSeconds,
 		})
 	updatedTolerations = append(updatedTolerations, newToleration)
+	r.Log.Info("[DEBUG] updateTolerationOnDs about to update original tolerations", "updated tolerations", updatedTolerations, "daemonset", ds)
 	if err := unstructured.SetNestedField(ds.Object, updatedTolerations, "spec", "template", "spec", "tolerations"); err != nil {
 		r.Log.Error(err, "failed to set tolerations")
 		return err
