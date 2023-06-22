@@ -241,17 +241,25 @@ func (r *SelfNodeRemediationConfigReconciler) updateTolerationOnDs(ds *unstructu
 		return err
 	}
 	r.Log.Info("[DEBUG] updateTolerationOnDs original tolerations", "tolerations", updatedTolerations)
-	newToleration := interface{}(
+
+	configTolerations := []interface{}{
 		map[string]interface{}{
-			"Key":               toleration.Key,
-			"operator":          toleration.Operator,
-			"value":             toleration.Value,
-			"effect":            toleration.Effect,
-			"tolerationseconds": toleration.TolerationSeconds,
-		})
-	updatedTolerations = append(updatedTolerations, newToleration)
-	r.Log.Info("[DEBUG] updateTolerationOnDs about to update original tolerations", "updated tolerations", updatedTolerations, "daemonset", ds)
-	if err := unstructured.SetNestedField(ds.Object, updatedTolerations, "spec", "template", "spec", "tolerations"); err != nil {
+			"effect":   toleration.Effect,
+			"key":      toleration.Key,
+			"operator": toleration.Operator,
+			//"value":             toleration.Value,
+			//"tolerationseconds": toleration.TolerationSeconds,
+		},
+	}
+	for index, originalToleration := range updatedTolerations {
+		if index == 0 {
+			r.Log.Info("[DEBUG] updateTolerationOnDs about to add toleration", "config toleration", configTolerations[0], "existing toleration", originalToleration)
+
+		}
+		configTolerations = append(configTolerations, originalToleration)
+	}
+	r.Log.Info("[DEBUG] updateTolerationOnDs about to set joined (config + original) tolerations", "joined tolerations", configTolerations, "daemonset", ds)
+	if err := unstructured.SetNestedSlice(ds.Object, configTolerations, "spec", "template", "spec", "tolerations"); err != nil {
 		r.Log.Error(err, "failed to set tolerations")
 		return err
 	}
