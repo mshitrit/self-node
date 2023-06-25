@@ -79,13 +79,13 @@ func (r *SelfNodeRemediationConfigReconciler) Reconcile(ctx context.Context, req
 		return ctrl.Result{}, err
 	}
 
-	if err := r.syncConfigDaemonSet(ctx, config); err != nil {
-		logger.Error(err, "error syncing DS")
+	if err := r.syncCerts(config); err != nil {
+		logger.Error(err, "error syncing certs")
 		return ctrl.Result{}, err
 	}
 
-	if err := r.syncCerts(config); err != nil {
-		logger.Error(err, "error syncing certs")
+	if err := r.syncConfigDaemonSet(ctx, config); err != nil {
+		logger.Error(err, "error syncing DS")
 		return ctrl.Result{}, err
 	}
 
@@ -140,11 +140,6 @@ func (r *SelfNodeRemediationConfigReconciler) syncConfigDaemonSet(ctx context.Co
 	r.Log.Info("[DEBUG] toleration count before update")
 	r.debugTolerationCount(objs)
 
-	flag := true
-	fmt.Println("flag")
-	if flag {
-		snrConfig.Spec.CustomDsTolerations = []corev1.Toleration{{Key: "node-role.kubernetes.io.infra", Operator: corev1.TolerationOpEqual, Effect: corev1.TaintEffectNoSchedule}}
-	}
 	if err := r.updateDsTolerations(objs, snrConfig.Spec.CustomDsTolerations); err != nil {
 		logger.Error(err, "Fail update daemonset tolerations")
 		return err

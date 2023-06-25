@@ -25,7 +25,7 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 const (
-	ConfigCRName                          = "config-defaults"
+	ConfigCRName                          = "self-node-remediation-config"
 	defaultWatchdogPath                   = "/dev/watchdog"
 	defaultSafetToAssumeNodeRebootTimeout = 180
 	defaultIsSoftwareRebootEnabled        = true
