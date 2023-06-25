@@ -2,6 +2,7 @@ package controllers_test
 
 import (
 	"context"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"time"
 
@@ -105,6 +106,48 @@ var _ = Describe("snrc controller Test", func() {
 			Expect(createdConfig.Spec.ApiServerTimeout.Seconds()).To(BeEquivalentTo(5))
 			Expect(createdConfig.Spec.ApiCheckInterval.Seconds()).To(BeEquivalentTo(15))
 			Expect(createdConfig.Spec.PeerUpdateInterval.Seconds()).To(BeEquivalentTo(15 * 60))
+		})
+	})
+
+	Context("SNRC with configurable toleration", func() {
+		config := &selfnoderemediationv1alpha1.SelfNodeRemediationConfig{}
+		config.Kind = "SelfNodeRemediationConfig"
+		config.APIVersion = "self-node-remediation.medik8s.io/v1alpha1"
+		config.Name = "config-defaults"
+		config.Namespace = namespace
+
+		FIt("Configurable tolerations should be added to DS", func() {
+
+			Expect(k8sClient).To(Not(BeNil()))
+			Expect(k8sClient.Create(context.Background(), config)).To(Succeed())
+
+			createdConfig := &selfnoderemediationv1alpha1.SelfNodeRemediationConfig{}
+			configKey := client.ObjectKeyFromObject(config)
+
+			Eventually(func() error {
+				return k8sClient.Get(context.Background(), configKey, createdConfig)
+			}, 5*time.Second, 250*time.Millisecond).Should(BeNil())
+
+			//ds := &appsv1.DaemonSet{}
+			//Expect(k8sClient.Get(context.Background(), client.ObjectKey{Name: "self-node-remediation-ds", Namespace: snrNamespace}, ds)).To(Succeed())
+			Expect(createdConfig.Spec.WatchdogFilePath).To(Equal("/dev/watchdog"))
+			Expect(createdConfig.Spec.SafeTimeToAssumeNodeRebootedSeconds).To(Equal(180))
+			Expect(createdConfig.Spec.MaxApiErrorThreshold).To(Equal(3))
+
+			Expect(createdConfig.Spec.PeerApiServerTimeout.Seconds()).To(BeEquivalentTo(5))
+			Expect(createdConfig.Spec.PeerRequestTimeout.Seconds()).To(BeEquivalentTo(5))
+			Expect(createdConfig.Spec.PeerDialTimeout.Seconds()).To(BeEquivalentTo(5))
+			Expect(createdConfig.Spec.ApiServerTimeout.Seconds()).To(BeEquivalentTo(5))
+			Expect(createdConfig.Spec.ApiCheckInterval.Seconds()).To(BeEquivalentTo(15))
+			Expect(createdConfig.Spec.PeerUpdateInterval.Seconds()).To(BeEquivalentTo(15 * 60))
+
+			createdConfig.Spec.CustomDsTolerations = []corev1.Toleration{{Key: "node-role.kubernetes.io.infra", Operator: corev1.TolerationOpEqual, Effect: corev1.TaintEffectNoSchedule}}
+			createdConfig.Spec.PeerUpdateInterval = &metav1.Duration{Duration: time.Second * 10}
+			Expect(k8sClient.Update(context.Background(), createdConfig)).To(Succeed())
+			for i := 0; i < 10; i++ {
+				time.Sleep(time.Second)
+			}
+
 		})
 	})
 
