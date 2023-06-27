@@ -20,32 +20,31 @@ import (
 
 var _ = Describe("snrc controller Test", func() {
 	dsName := "self-node-remediation-ds"
+	var config *selfnoderemediationv1alpha1.SelfNodeRemediationConfig
+	var ds *appsv1.DaemonSet
+	dummySelfNodeRemediationImage := "self-node-remediation-image"
+
+	BeforeEach(func() {
+		ds = &appsv1.DaemonSet{}
+		config = &selfnoderemediationv1alpha1.SelfNodeRemediationConfig{}
+
+		_ = os.Setenv("SELF_NODE_REMEDIATION_IMAGE", dummySelfNodeRemediationImage)
+		config.Kind = "SelfNodeRemediationConfig"
+		config.APIVersion = "self-node-remediation.medik8s.io/v1alpha1"
+		config.Spec.WatchdogFilePath = "/dev/foo"
+		config.Spec.SafeTimeToAssumeNodeRebootedSeconds = 123
+		config.Name = selfnoderemediationv1alpha1.ConfigCRName
+		config.Namespace = namespace
+
+	})
 
 	Context("DS installation", func() {
-
-		dummySelfNodeRemediationImage := "self-node-remediation-image"
-		var config *selfnoderemediationv1alpha1.SelfNodeRemediationConfig
-		var ds *appsv1.DaemonSet
-
 		JustBeforeEach(func() {
 			Expect(k8sClient.Create(context.Background(), config)).To(Succeed())
 			DeferCleanup(func() {
 				Expect(k8sClient.Delete(context.Background(), config)).To(Succeed())
 				k8sClient.Delete(context.Background(), ds)
 			})
-
-		})
-		BeforeEach(func() {
-			ds = &appsv1.DaemonSet{}
-			config = &selfnoderemediationv1alpha1.SelfNodeRemediationConfig{}
-
-			_ = os.Setenv("SELF_NODE_REMEDIATION_IMAGE", dummySelfNodeRemediationImage)
-			config.Kind = "SelfNodeRemediationConfig"
-			config.APIVersion = "self-node-remediation.medik8s.io/v1alpha1"
-			config.Spec.WatchdogFilePath = "/dev/foo"
-			config.Spec.SafeTimeToAssumeNodeRebootedSeconds = 123
-			config.Name = selfnoderemediationv1alpha1.ConfigCRName
-			config.Namespace = namespace
 
 		})
 
@@ -161,6 +160,9 @@ var _ = Describe("snrc controller Test", func() {
 		var dsResourceVersion string
 		var key types.NamespacedName
 		BeforeEach(func() {
+			Expect(k8sClient.Create(context.Background(), config)).To(Succeed())
+			time.Sleep(time.Second)
+
 			key = types.NamespacedName{
 				Namespace: namespace,
 				Name:      dsName,
