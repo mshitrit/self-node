@@ -66,7 +66,7 @@ type SelfNodeRemediationConfigSpec struct {
 
 	// Valid time units are "ms", "s", "m", "h".
 	// +optional
-	// +kubebuilder:default:="15m"
+	// +kubebuilder:default:="900s"
 	// +kubebuilder:validation:Pattern="^(0|([0-9]+(\\.[0-9]+)?(ms|s|m|h)))$"
 	// +kubebuilder:validation:Type:=string
 	PeerUpdateInterval *metav1.Duration `json:"peerUpdateInterval,omitempty"`
