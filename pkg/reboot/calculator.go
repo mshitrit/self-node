@@ -14,6 +14,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/medik8s/self-node-remediation/api/v1alpha1"
 	"github.com/medik8s/self-node-remediation/pkg/watchdog"
 )
 
@@ -106,7 +107,31 @@ func (s *safeTimeCalculator) calcMinTimeAssumeRebooted() error {
 	s.log.Info("calculated minTimeToAssumeNodeRebooted is:", "minTimeToAssumeNodeRebooted", minTime)
 	s.minTimeToAssumeNodeRebooted = minTime
 
-	if s.timeToAssumeNodeRebooted < minTime {
+	//TODO mshitrit cont here
+	if s.timeToAssumeNodeRebooted == 0 {
+		//set it on configuration
+		s.log.Info("[DEBUG] snr agent about to update SafeTimeToAssumeNodeRebootedSeconds", "calculated min time in secs", minTime.Seconds())
+		confList := &v1alpha1.SelfNodeRemediationConfigList{}
+		if err := s.k8sClient.List(context.Background(), confList); err != nil {
+			//TODO mshitrit handle error
+			s.log.Error(err, "failed to get snr configuration")
+			return err
+		}
+		for _, snrConf := range confList.Items {
+			if snrConf.Spec.SafeTimeToAssumeNodeRebootedSeconds == 0 {
+				snrConf.Spec.SafeTimeToAssumeNodeRebootedSeconds = int(minTime.Seconds())
+				if err := s.k8sClient.Update(context.Background(), &snrConf); err != nil {
+					s.log.Error(err, "failed to update SafeTimeToAssumeNodeRebootedSeconds with min value")
+					return err
+					//TODO mshitrit handle error
+				}
+			}
+		}
+	} else {
+		s.log.Info("[DEBUG] no need to update SafeTimeToAssumeNodeRebootedSeconds", "value", s.timeToAssumeNodeRebooted)
+	}
+
+	if s.timeToAssumeNodeRebooted < minTime && s.timeToAssumeNodeRebooted != 0 {
 		err := fmt.Errorf("snr agent can't start: the requested value for SafeTimeToAssumeNodeRebootedSeconds is too low")
 		s.log.Error(err, err.Error(), "requested SafeTimeToAssumeNodeRebootedSeconds", s.timeToAssumeNodeRebooted, "minimal calculated value for SafeTimeToAssumeNodeRebootedSeconds", minTime)
 		return err
