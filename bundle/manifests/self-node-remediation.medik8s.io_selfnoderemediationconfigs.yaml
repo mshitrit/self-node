@@ -147,7 +147,7 @@ spec:
                 pattern: ^(0|([0-9]+(\.[0-9]+)?(ms|s|m|h)))$
                 type: string
               peerUpdateInterval:
-                default: 900s
+                default: 15m
                 description: Valid time units are "ms", "s", "m", "h".
                 pattern: ^(0|([0-9]+(\.[0-9]+)?(ms|s|m|h)))$
                 type: string

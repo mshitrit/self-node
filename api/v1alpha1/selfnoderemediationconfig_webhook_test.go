@@ -19,7 +19,7 @@ const (
 	peerDialTimeoutDefault      = 5 * time.Second
 	peerRequestTimeoutDefault   = 5 * time.Second
 	apiCheckIntervalDefault     = 15 * time.Second
-	peerUpdateIntervalDefault   = 15 * 60 * time.Second
+	peerUpdateIntervalDefault   = 15 * time.Minute
 )
 
 // each field in the list will be used in different IT test
