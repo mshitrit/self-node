@@ -2,7 +2,7 @@ package reboot
 
 import (
 	"context"
-	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/medik8s/self-node-remediation/api/v1alpha1"
+	"github.com/medik8s/self-node-remediation/pkg/utils"
 	"github.com/medik8s/self-node-remediation/pkg/watchdog"
 )
 
@@ -106,35 +107,42 @@ func (s *safeTimeCalculator) calcMinTimeAssumeRebooted() error {
 	minTime += 15 * time.Second
 	s.log.Info("calculated minTimeToAssumeNodeRebooted is:", "minTimeToAssumeNodeRebooted", minTime)
 	s.minTimeToAssumeNodeRebooted = minTime
+	minTimeSec := int(minTime.Seconds())
 
-	//TODO mshitrit cont here
-	if s.timeToAssumeNodeRebooted == 0 {
-		//set it on configuration
-		s.log.Info("[DEBUG] snr agent about to update SafeTimeToAssumeNodeRebootedSeconds", "calculated min time in secs", minTime.Seconds())
-		confList := &v1alpha1.SelfNodeRemediationConfigList{}
-		if err := s.k8sClient.List(context.Background(), confList); err != nil {
-			//TODO mshitrit handle error
-			s.log.Error(err, "failed to get snr configuration")
-			return err
-		}
-		for _, snrConf := range confList.Items {
-			if snrConf.Spec.SafeTimeToAssumeNodeRebootedSeconds == 0 {
-				snrConf.Spec.SafeTimeToAssumeNodeRebootedSeconds = int(minTime.Seconds())
-				if err := s.k8sClient.Update(context.Background(), &snrConf); err != nil {
-					s.log.Error(err, "failed to update SafeTimeToAssumeNodeRebootedSeconds with min value")
-					return err
-					//TODO mshitrit handle error
-				}
-			}
-		}
-	} else {
-		s.log.Info("[DEBUG] no need to update SafeTimeToAssumeNodeRebootedSeconds", "value", s.timeToAssumeNodeRebooted)
+	//set it on configuration
+	confList := &v1alpha1.SelfNodeRemediationConfigList{}
+	if err := s.k8sClient.List(context.Background(), confList); err != nil {
+		s.log.Error(err, "failed to get snr configuration")
+		return err
 	}
 
-	if s.timeToAssumeNodeRebooted < minTime && s.timeToAssumeNodeRebooted != 0 {
-		err := fmt.Errorf("snr agent can't start: the requested value for SafeTimeToAssumeNodeRebootedSeconds is too low")
-		s.log.Error(err, err.Error(), "requested SafeTimeToAssumeNodeRebootedSeconds", s.timeToAssumeNodeRebooted, "minimal calculated value for SafeTimeToAssumeNodeRebootedSeconds", minTime)
-		return err
+	for _, snrConf := range confList.Items {
+		var isUpdateRequired bool
+		if snrConf.GetAnnotations() == nil {
+			snrConf.Annotations = make(map[string]string)
+		}
+		prevMinRebootTimeSec, isSet := snrConf.GetAnnotations()[utils.MinimumSafeRebootTimeSec]
+		s.log.Info("[DEBUG] snr agent about to check SafeTimeToAssumeNodeRebootedSeconds", "prevMinRebootTimeSec", prevMinRebootTimeSec, "isSet", isSet)
+
+		minTimeSecString := strconv.Itoa(minTimeSec)
+		if !isSet || prevMinRebootTimeSec != minTimeSecString {
+			s.log.Info("[DEBUG] snr agent about to modify config", "prevMinRebootTimeSec", prevMinRebootTimeSec, "isSet", isSet, "minTimeSecString", minTimeSecString)
+			snrConf.GetAnnotations()[utils.MinimumSafeRebootTimeSec] = minTimeSecString
+			isUpdateRequired = true
+		}
+
+		if snrConf.Spec.SafeTimeToAssumeNodeRebootedSeconds < minTimeSec {
+			isUpdateRequired = true
+			s.log.Info("[DEBUG] snr agent about to update SafeTimeToAssumeNodeRebootedSeconds", "calculated min time in secs", minTime.Seconds())
+			snrConf.Spec.SafeTimeToAssumeNodeRebootedSeconds = minTimeSec
+
+		}
+		if isUpdateRequired {
+			if err := s.k8sClient.Update(context.Background(), &snrConf); err != nil {
+				s.log.Error(err, "failed to update SafeTimeToAssumeNodeRebootedSeconds with min value")
+				return err
+			}
+		}
 	}
 	return nil
 }
