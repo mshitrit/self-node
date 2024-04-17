@@ -46,6 +46,7 @@ type SelfNodeRemediationConfigSpec struct {
 	// In an effort to prevent this, the operator ignores values lower than a minimum calculated from the
 	// ApiCheckInterval, ApiServerTimeout, MaxApiErrorThreshold, PeerDialTimeout, and PeerRequestTimeout fields.
 	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=180
 	SafeTimeToAssumeNodeRebootedSeconds int `json:"safeTimeToAssumeNodeRebootedSeconds,omitempty"`
 
 	// Valid time units are "ms", "s", "m", "h".
