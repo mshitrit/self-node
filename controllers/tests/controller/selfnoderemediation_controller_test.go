@@ -44,6 +44,8 @@ var _ = Describe("SNR Controller", func() {
 		snr.Namespace = snrNamespace
 		snrConfig = shared.GenerateTestConfig()
 		time.Sleep(time.Second * 2)
+
+		dummyDog.Reset()
 	})
 
 	JustBeforeEach(func() {
