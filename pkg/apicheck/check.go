@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/medik8s/common/pkg/events"
 	"google.golang.org/grpc/credentials"
 
 	corev1 "k8s.io/api/core/v1"
@@ -26,6 +27,10 @@ import (
 	"github.com/medik8s/self-node-remediation/pkg/peers"
 	"github.com/medik8s/self-node-remediation/pkg/reboot"
 	"github.com/medik8s/self-node-remediation/pkg/utils"
+)
+
+const (
+	eventReasonPeerTimeoutAdjusted = "PeerTimeoutAdjusted"
 )
 
 type ApiConnectivityCheck struct {
@@ -291,20 +296,7 @@ func (c *ApiConnectivityCheck) getEffectivePeerRequestTimeout() time.Duration {
 			"apiServerTimeout", c.config.ApiServerTimeout,
 			"minimumBuffer", v1alpha1.MinimumBuffer,
 			"effectiveTimeout", minimumSafeTimeout)
-
-		// Emit Kubernetes event to notify user
-		if c.config.Recorder != nil {
-			c.config.Recorder.Eventf(
-				&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: c.config.MyNodeName}},
-				corev1.EventTypeWarning,
-				"PeerTimeoutAdjusted",
-				"PeerRequestTimeout (%s) was too low compared to ApiServerTimeout (%s), using safe value (%s) instead",
-				c.config.PeerRequestTimeout,
-				c.config.ApiServerTimeout,
-				minimumSafeTimeout,
-			)
-		}
-
+		events.WarningEventf(c.config.Recorder, &v1alpha1.SelfNodeRemediationConfig{ObjectMeta: metav1.ObjectMeta{Name: v1alpha1.ConfigCRName}}, eventReasonPeerTimeoutAdjusted, "PeerRequestTimeout (%s) was too low compared to ApiServerTimeout (%s), using safe value (%s) instead", c.config.PeerRequestTimeout, c.config.ApiServerTimeout, minimumSafeTimeout)
 		return minimumSafeTimeout
 	}
 
