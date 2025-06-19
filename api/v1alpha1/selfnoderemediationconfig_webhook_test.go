@@ -139,38 +139,14 @@ var _ = Describe("SelfNodeRemediationConfig Validation", func() {
 		})
 	})
 
-})
-
-/*var _ = Describe("SelfNodeRemediationConfig Webhook", func() {
-
-	var testEnv *envtest.Environment
-	var k8sClient client.Client
-	var cancel context.CancelFunc
-
-	BeforeEach(func() {
-		testEnv = &envtest.Environment{}
-		cfg, err := testEnv.Start()
-		Expect(err).NotTo(HaveOccurred())
-		Expect(cfg).NotTo(BeNil())
-
-		scheme := runtime.NewScheme()
-		err = AddToScheme(scheme)
-		Expect(err).NotTo(HaveOccurred())
-
-		k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(k8sClient).NotTo(BeNil())
-	})
-
-	AfterEach(func() {
-		cancel()
-		err := testEnv.Stop()
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	Context("PeerRequestTimeout Safety Validation", func() {
+	Describe("PeerRequestTimeout Safety Validation", func() {
+		var snrc *SelfNodeRemediationConfig
+		BeforeEach(func() {
+			snrc = createTestSelfNodeRemediationConfigCR()
+			snrc.Name = ConfigCRName
+			_ = os.Setenv("DEPLOYMENT_NAMESPACE", snrc.Namespace)
+		})
 		It("should produce warning when PeerRequestTimeout is too low", func() {
-			snrc := createTestSelfNodeRemediationConfigCR()
 			// Set ApiServerTimeout to 5s and PeerRequestTimeout to 6s (less than 5s + 2s buffer)
 			snrc.Spec.ApiServerTimeout = &metav1.Duration{Duration: 5 * time.Second}
 			snrc.Spec.PeerRequestTimeout = &metav1.Duration{Duration: 6 * time.Second}
@@ -182,7 +158,6 @@ var _ = Describe("SelfNodeRemediationConfig Validation", func() {
 		})
 
 		It("should not produce warning when PeerRequestTimeout is safe", func() {
-			snrc := createTestSelfNodeRemediationConfigCR()
 			// Set ApiServerTimeout to 5s and PeerRequestTimeout to 8s (greater than 5s + 2s buffer)
 			snrc.Spec.ApiServerTimeout = &metav1.Duration{Duration: 5 * time.Second}
 			snrc.Spec.PeerRequestTimeout = &metav1.Duration{Duration: 8 * time.Second}
@@ -193,7 +168,6 @@ var _ = Describe("SelfNodeRemediationConfig Validation", func() {
 		})
 
 		It("should not produce warning when using default values", func() {
-			snrc := createTestSelfNodeRemediationConfigCR()
 			// Use default values: ApiServerTimeout=5s, PeerRequestTimeout=7s (which is safe)
 
 			warnings, err := snrc.ValidateCreate()
@@ -201,8 +175,7 @@ var _ = Describe("SelfNodeRemediationConfig Validation", func() {
 			Expect(len(warnings)).To(Equal(0))
 		})
 	})
-
-})*/
+})
 
 func testSingleInvalidField(validationType validationType) {
 	for _, item := range testItems {
