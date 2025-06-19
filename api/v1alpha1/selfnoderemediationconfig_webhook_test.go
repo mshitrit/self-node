@@ -11,10 +11,10 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/runtime"
 )
 
 // default CR fields durations
@@ -149,11 +149,9 @@ var _ = Describe("SelfNodeRemediationConfig Webhook", func() {
 
 	var testEnv *envtest.Environment
 	var k8sClient client.Client
-	var ctx context.Context
 	var cancel context.CancelFunc
 
 	BeforeEach(func() {
-		ctx, cancel = context.WithCancel(context.TODO())
 		testEnv = &envtest.Environment{}
 		cfg, err := testEnv.Start()
 		Expect(err).NotTo(HaveOccurred())
