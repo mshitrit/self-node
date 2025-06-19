@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -11,6 +12,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/runtime"
 )
 
 // default CR fields durations
@@ -18,7 +22,7 @@ const (
 	peerApiServerTimeoutDefault = 5 * time.Second
 	apiServerTimeoutDefault     = 5 * time.Second
 	peerDialTimeoutDefault      = 5 * time.Second
-	peerRequestTimeoutDefault   = 5 * time.Second
+	peerRequestTimeoutDefault   = 7 * time.Second
 	apiCheckIntervalDefault     = 15 * time.Second
 	peerUpdateIntervalDefault   = 15 * time.Minute
 )
@@ -136,6 +140,71 @@ var _ = Describe("SelfNodeRemediationConfig Validation", func() {
 				Expect(err).To(Succeed())
 				Expect(war[0]).To(ContainSubstring("The default configuration is deleted, Self Node Remediation is now disabled"))
 			})
+		})
+	})
+
+})
+
+var _ = Describe("SelfNodeRemediationConfig Webhook", func() {
+
+	var testEnv *envtest.Environment
+	var k8sClient client.Client
+	var ctx context.Context
+	var cancel context.CancelFunc
+
+	BeforeEach(func() {
+		ctx, cancel = context.WithCancel(context.TODO())
+		testEnv = &envtest.Environment{}
+		cfg, err := testEnv.Start()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cfg).NotTo(BeNil())
+
+		scheme := runtime.NewScheme()
+		err = AddToScheme(scheme)
+		Expect(err).NotTo(HaveOccurred())
+
+		k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k8sClient).NotTo(BeNil())
+	})
+
+	AfterEach(func() {
+		cancel()
+		err := testEnv.Stop()
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	Context("PeerRequestTimeout Safety Validation", func() {
+		It("should produce warning when PeerRequestTimeout is too low", func() {
+			snrc := createTestSelfNodeRemediationConfigCR()
+			// Set ApiServerTimeout to 5s and PeerRequestTimeout to 6s (less than 5s + 2s buffer)
+			snrc.Spec.ApiServerTimeout = &metav1.Duration{Duration: 5 * time.Second}
+			snrc.Spec.PeerRequestTimeout = &metav1.Duration{Duration: 6 * time.Second}
+
+			warnings, err := snrc.ValidateCreate()
+			Expect(err).To(BeNil())
+			Expect(len(warnings)).To(Equal(1))
+			Expect(warnings[0]).To(ContainSubstring("PeerRequestTimeout (6s) is less than ApiServerTimeout + MinimumBuffer"))
+		})
+
+		It("should not produce warning when PeerRequestTimeout is safe", func() {
+			snrc := createTestSelfNodeRemediationConfigCR()
+			// Set ApiServerTimeout to 5s and PeerRequestTimeout to 8s (greater than 5s + 2s buffer)
+			snrc.Spec.ApiServerTimeout = &metav1.Duration{Duration: 5 * time.Second}
+			snrc.Spec.PeerRequestTimeout = &metav1.Duration{Duration: 8 * time.Second}
+
+			warnings, err := snrc.ValidateCreate()
+			Expect(err).To(BeNil())
+			Expect(len(warnings)).To(Equal(0))
+		})
+
+		It("should not produce warning when using default values", func() {
+			snrc := createTestSelfNodeRemediationConfigCR()
+			// Use default values: ApiServerTimeout=5s, PeerRequestTimeout=7s (which is safe)
+
+			warnings, err := snrc.ValidateCreate()
+			Expect(err).To(BeNil())
+			Expect(len(warnings)).To(Equal(0))
 		})
 	})
 
