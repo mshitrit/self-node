@@ -51,7 +51,7 @@ const (
 	minDurPeerUpdateInterval   = 10 * time.Second
 
 	// MinimumBuffer is the minimum buffer time between APIServerTimeout and PeerRequestTimeout
-	// to prevent race conditions and allow time for network communication
+	// It is required to make sure there is enough time for network communication between the peers in case the API Server is out
 	MinimumBuffer = 2 * time.Second
 )
 
