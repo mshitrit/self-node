@@ -19,18 +19,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	selfNodeRemediation "github.com/medik8s/self-node-remediation/api"
+	"github.com/medik8s/self-node-remediation/api/v1alpha1"
 	"github.com/medik8s/self-node-remediation/pkg/certificates"
 	"github.com/medik8s/self-node-remediation/pkg/controlplane"
 	"github.com/medik8s/self-node-remediation/pkg/peerhealth"
 	"github.com/medik8s/self-node-remediation/pkg/peers"
 	"github.com/medik8s/self-node-remediation/pkg/reboot"
 	"github.com/medik8s/self-node-remediation/pkg/utils"
-)
-
-const (
-	// MinimumBuffer is the minimum buffer time between APIServerTimeout and PeerRequestTimeout
-	// to prevent race conditions and allow time for network communication
-	MinimumBuffer = 2 * time.Second
 )
 
 type ApiConnectivityCheck struct {
@@ -287,14 +282,14 @@ func (c *ApiConnectivityCheck) getHealthStatusFromPeers(addresses []corev1.PodIP
 // getEffectivePeerRequestTimeout calculates the effective peer request timeout
 // ensuring it's safe relative to the API server timeout by enforcing a minimum buffer
 func (c *ApiConnectivityCheck) getEffectivePeerRequestTimeout() time.Duration {
-	minimumSafeTimeout := c.config.ApiServerTimeout + MinimumBuffer
+	minimumSafeTimeout := c.config.ApiServerTimeout + v1alpha1.MinimumBuffer
 
 	if c.config.PeerRequestTimeout < minimumSafeTimeout {
 		// Log warning about timeout adjustment
 		c.config.Log.Info("PeerRequestTimeout is too low, using adjusted value for safety",
 			"configuredTimeout", c.config.PeerRequestTimeout,
 			"apiServerTimeout", c.config.ApiServerTimeout,
-			"minimumBuffer", MinimumBuffer,
+			"minimumBuffer", v1alpha1.MinimumBuffer,
 			"effectiveTimeout", minimumSafeTimeout)
 
 		// Emit Kubernetes event to notify user
