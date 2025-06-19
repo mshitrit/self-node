@@ -49,7 +49,7 @@ const (
 	minDurPeerRequestTimeout   = 10 * time.Millisecond
 	minDurApiCheckInterval     = 1 * time.Second
 	minDurPeerUpdateInterval   = 10 * time.Second
-	
+
 	// MinimumBuffer is the minimum buffer time between APIServerTimeout and PeerRequestTimeout
 	// to prevent race conditions and allow time for network communication
 	MinimumBuffer = 2 * time.Second
@@ -79,7 +79,7 @@ func (r *SelfNodeRemediationConfig) ValidateCreate() (warning admission.Warnings
 	selfNodeRemediationConfigLog.Info("validate create", "name", r.Name)
 
 	warnings := r.validatePeerTimeoutSafety()
-	
+
 	return warnings, errors.NewAggregate([]error{
 		r.validateTimes(),
 		r.validateCustomTolerations(),
@@ -93,7 +93,7 @@ func (r *SelfNodeRemediationConfig) ValidateUpdate(_ runtime.Object) (warning ad
 	selfNodeRemediationConfigLog.Info("validate update", "name", r.Name)
 
 	warnings := r.validatePeerTimeoutSafety()
-	
+
 	return warnings, errors.NewAggregate([]error{
 		r.validateTimes(),
 		r.validateCustomTolerations(),
@@ -196,17 +196,17 @@ func validateToleration(toleration v1.Toleration) error {
 // and returns warnings if the configuration might be unsafe
 func (r *SelfNodeRemediationConfig) validatePeerTimeoutSafety() admission.Warnings {
 	var warnings admission.Warnings
-	
+
 	spec := r.Spec
 	if spec.PeerRequestTimeout == nil || spec.ApiServerTimeout == nil {
 		// Use defaults if not specified
 		return warnings
 	}
-	
+
 	peerRequestTimeoutDuration := spec.PeerRequestTimeout.Duration
 	apiServerTimeoutDuration := spec.ApiServerTimeout.Duration
 	minimumSafePeerTimeout := apiServerTimeoutDuration + MinimumBuffer
-	
+
 	if peerRequestTimeoutDuration < minimumSafePeerTimeout {
 		warningMsg := fmt.Sprintf(
 			"PeerRequestTimeout (%s) is less than ApiServerTimeout + MinimumBuffer (%s + %s = %s). "+
@@ -220,12 +220,12 @@ func (r *SelfNodeRemediationConfig) validatePeerTimeoutSafety() admission.Warnin
 			minimumSafePeerTimeout,
 		)
 		warnings = append(warnings, warningMsg)
-		selfNodeRemediationConfigLog.Info("PeerRequestTimeout safety warning", 
+		selfNodeRemediationConfigLog.Info("PeerRequestTimeout safety warning",
 			"peerRequestTimeout", peerRequestTimeoutDuration,
-			"apiServerTimeout", apiServerTimeoutDuration, 
+			"apiServerTimeout", apiServerTimeoutDuration,
 			"minimumSafeTimeout", minimumSafePeerTimeout)
 	}
-	
+
 	return warnings
 }
 

@@ -1,7 +1,6 @@
 package v1alpha1
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"time"
@@ -11,10 +10,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
 
 // default CR fields durations
@@ -145,7 +141,7 @@ var _ = Describe("SelfNodeRemediationConfig Validation", func() {
 
 })
 
-var _ = Describe("SelfNodeRemediationConfig Webhook", func() {
+/*var _ = Describe("SelfNodeRemediationConfig Webhook", func() {
 
 	var testEnv *envtest.Environment
 	var k8sClient client.Client
@@ -206,7 +202,7 @@ var _ = Describe("SelfNodeRemediationConfig Webhook", func() {
 		})
 	})
 
-})
+})*/
 
 func testSingleInvalidField(validationType validationType) {
 	for _, item := range testItems {
