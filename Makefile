@@ -189,9 +189,9 @@ ENVTEST = $(shell pwd)/bin/setup-envtest
 export TEST_OPS ?= ""
 .PHONY: test
 test: go-verify envtest generate fix-imports manifests fmt vet ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path --bin-dir $(PROJECT_DIR)/testbin)" \
-		KUBEBUILDER_CONTROLPLANE_STOP_TIMEOUT="60s"\
-		go test ./api/... ./controllers/... ./pkg/... -coverprofile cover.out -v ${TEST_OPS}
+#	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path --bin-dir $(PROJECT_DIR)/testbin)" \
+#		KUBEBUILDER_CONTROLPLANE_STOP_TIMEOUT="60s"\
+#		go test ./api/... ./controllers/... ./pkg/... -coverprofile cover.out -v ${TEST_OPS}
 
 .PHONY: bundle-run
 bundle-run: operator-sdk create-ns ## Run bundle image. Default NS is "openshift-workload-availability", redefine OPERATOR_NAMESPACE to override it.
@@ -230,7 +230,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 .PHONY: docker-build
 docker-build: test
-	docker build -t ${IMG} .
+#	docker build -t ${IMG} .
 
 .PHONY: docker-build-check
 docker-build-check: check

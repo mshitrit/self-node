@@ -12,5 +12,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
-  newName: quay.io/medik8s/self-node-remediation-operator
-  newTag: latest
+  newName: quay.io/redhat-user-workloads/rhwa-tenant/self-node-remediation/snr-operator-0-11
+  newTag: snr-operator-0-11-on-pull-request-n67wt-build-container
