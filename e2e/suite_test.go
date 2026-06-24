@@ -52,6 +52,8 @@ var _ = BeforeSuite(func(ctx SpecContext) {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 	logger = logf.Log
 
+	_ = os.Setenv(operatorInstalledNamespaceEnvVar, "openshift-workload-availability")
+	_ = os.Setenv("KUBECONFIG", "/home/mshitrit/scripts/openshift-installer/openshift-install-4.20/auth/kubeconfig")
 	testNamespace = os.Getenv(operatorInstalledNamespaceEnvVar)
 	if testNamespace == "" {
 		logger.Info("Env var for operator's namespace not set, thus it uses default namespace as test namespace",
